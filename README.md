@@ -97,3 +97,5 @@ The model is trained on the PhishTank dataset and uses a Random Forest classifie
 ## Note
 
 This is a demonstration project and should not be used as the sole means of detecting phishing websites. Always use multiple security measures and stay vigilant when browsing the web. 
+
+The dataset used here is : https://drive.google.com/file/d/1oFUge7ag89ZugAjiLDMUny17zULTp2_E/view?usp=sharing
