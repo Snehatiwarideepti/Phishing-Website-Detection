@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Website Detector</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #4cc9f0;
+            --danger-color: #f72585;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+
+        body {
+            background: linear-gradient(135deg, #4361ee 0%, #3f37c9 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--dark-color);
+        }
+
+        .main-container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+        }
+
+        .main-container:hover {
+            transform: translateY(-5px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid rgba(67, 97, 238, 0.1);
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .url-input-container {
+            position: relative;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .url-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(67, 97, 238, 0.25);
+            outline: none;
+        }
+
+        .check-button {
+            position: absolute;
+            right: 25px;
+            top: 25px;
+            bottom: 25px;
+            padding: 0 1.5rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .check-button:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        .result-container {
+            display: none;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 15px;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            animation: slideDown 0.5s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .result-icon {
+            font-size: 2rem;
+            margin-right: 1rem;
+        }
+
+        .result-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--primary-color);
+        }
+
+        .alert {
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .alert i {
+            font-size: 1.5rem;
+            margin-right: 1rem;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-box {
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            height: 300px;
+        }
+
+        .chart-box.large {
+            grid-column: span 2;
+            height: 350px;
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            text-align: center;
+        }
+
+        .confidence-container {
+            margin-bottom: 1.5rem;
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .confidence-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            text-align: center;
+        }
+
+        .confidence-bar {
+            height: 20px;
+            background: #eee;
+            border-radius: 10px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .confidence-progress {
+            height: 100%;
+            background: var(--primary-color);
+            transition: width 1s ease;
+            border-radius: 10px;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .feature-item {
+            padding: 1rem;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .feature-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-name {
+            color: var(--secondary-color);
+            font-weight: 500;
+        }
+
+        .feature-value {
+            color: #666;
+            font-weight: 600;
+            background: rgba(67, 97, 238, 0.1);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading p {
+            margin-top: 1rem;
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .stats-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            flex: 1;
+            min-width: 200px;
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+            
+            .check-button {
+                position: static;
+                width: 100%;
+                margin-top: 1rem;
+                padding: 0.8rem;
+            }
+            
+            .feature-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container main-container">
+        <div class="header">
+            <h1><i class="fas fa-shield-alt"></i> Phishing Website Detector</h1>
+            <p>Enter a URL below to check if it's potentially a phishing website</p>
+        </div>
+
+        <div class="url-input-container">
+            <input type="url" class="url-input" id="urlInput" placeholder="Enter website URL (e.g., https://www.example.com)" required>
+            <button class="check-button" type="button" onclick="checkURL()">
+                <i class="fas fa-search"></i> Check URL
+            </button>
+        </div>
+
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <p>Analyzing URL...</p>
+        </div>
+
+        <div class="result-container">
+            <div class="result-header">
+                <div class="result-icon"></div>
+                <h3 class="result-title">Analysis Results</h3>
+            </div>
+            
+            <div class="alert" role="alert"></div>
+            
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="stat-value" id="confidenceValue">0%</div>
+                    <div class="stat-label">Confidence Score</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-link"></i></div>
+                    <div class="stat-value" id="urlLength">0</div>
+                    <div class="stat-label">URL Length</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="stat-value" id="specialChars">0</div>
+                    <div class="stat-label">Special Characters</div>
+                </div>
+            </div>
+            
+            <div class="confidence-container">
+                <div class="confidence-title">Confidence Score</div>
+                <div class="confidence-bar">
+                    <div class="confidence-progress"></div>
+                </div>
+            </div>
+            
+            <div class="charts-container">
+                <div class="chart-box large">
+                    <div class="chart-title">URL Feature Distribution</div>
+                    <canvas id="featureChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title">Risk Analysis</div>
+                    <canvas id="riskChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title">Feature Importance</div>
+                    <canvas id="pieChart"></canvas>
+                </div>
+                <div class="chart-box large">
+                    <div class="chart-title">URL Length vs. Special Characters</div>
+                    <canvas id="scatterChart"></canvas>
+                </div>
+            </div>
+            
+            <h4 class="mt-4">URL Features:</h4>
+            <ul class="feature-list"></ul>
+            
+            <div class="footer">
+                <p>This tool uses machine learning to detect potential phishing websites. Always be cautious when browsing the web.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let featureChart = null;
+        let riskChart = null;
+        let pieChart = null;
+        let scatterChart = null;
+        
+        function checkURL() {
+            const urlInput = document.getElementById('urlInput');
+            const loading = document.querySelector('.loading');
+            const resultContainer = document.querySelector('.result-container');
+            const alert = document.querySelector('.alert');
+            const featureList = document.querySelector('.feature-list');
+            const resultIcon = document.querySelector('.result-icon');
+            const confidenceProgress = document.querySelector('.confidence-progress');
+            const confidenceValue = document.getElementById('confidenceValue');
+            const urlLength = document.getElementById('urlLength');
+            const specialChars = document.getElementById('specialChars');
+
+            if (!urlInput.value) {
+                alert.className = 'alert alert-danger';
+                alert.innerHTML = '<i class="fas fa-exclamation-circle"></i> Please enter a URL';
+                resultContainer.style.display = 'block';
+                return;
+            }
+
+            // Show loading
+            loading.style.display = 'block';
+            resultContainer.style.display = 'none';
+
+            fetch('/check_url', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `url=${encodeURIComponent(urlInput.value)}`
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Update result container
+                const isPhishing = data.is_phishing;
+                const probability = data.probability * 100;
+                
+                alert.className = `alert ${isPhishing ? 'alert-danger' : 'alert-success'}`;
+                alert.innerHTML = isPhishing 
+                    ? `<i class="fas fa-exclamation-triangle"></i> This URL is likely a phishing website (${probability.toFixed(2)}% confidence)`
+                    : `<i class="fas fa-check-circle"></i> This URL appears to be legitimate (${(100 - probability).toFixed(2)}% confidence)`;
+
+                resultIcon.className = `result-icon fas ${isPhishing ? 'fa-exclamation-triangle text-danger' : 'fa-check-circle text-success'}`;
+                
+                // Update confidence bar and value
+                confidenceProgress.style.width = `${probability}%`;
+                confidenceProgress.style.backgroundColor = isPhishing ? 'var(--danger-color)' : 'var(--success-color)';
+                confidenceValue.textContent = `${probability.toFixed(1)}%`;
+                
+                // Update stats
+                urlLength.textContent = data.features.url_length;
+                specialChars.textContent = data.features.special_char_count;
+                
+                // Update feature list
+                featureList.innerHTML = '';
+                for (const [key, value] of Object.entries(data.features)) {
+                    const li = document.createElement('li');
+                    li.className = 'feature-item';
+                    li.innerHTML = `
+                        <span class="feature-name">${key.replace(/_/g, ' ').toUpperCase()}</span>
+                        <span class="feature-value">${value}</span>
+                    `;
+                    featureList.appendChild(li);
+                }
+                
+                // Create charts
+                createFeatureChart(data.features);
+                createRiskChart(data.features, isPhishing);
+                createPieChart(data.features);
+                createScatterChart(data.features);
+                
+                // Show results
+                resultContainer.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert.className = 'alert alert-danger';
+                alert.innerHTML = `<i class="fas fa-exclamation-circle"></i> Error: ${error.message || 'An error occurred while analyzing the URL. Please try again.'}`;
+                resultContainer.style.display = 'block';
+                
+                // Reset charts if they exist
+                if (featureChart) featureChart.destroy();
+                if (riskChart) riskChart.destroy();
+                if (pieChart) pieChart.destroy();
+                if (scatterChart) scatterChart.destroy();
+            })
+            .finally(() => {
+                loading.style.display = 'none';
+            });
+        }
+        
+        function createFeatureChart(features) {
+            const ctx = document.getElementById('featureChart').getContext('2d');
+            
+            // Destroy previous chart if it exists
+            if (featureChart) {
+                featureChart.destroy();
+            }
+            
+            // Prepare data for bar chart
+            const labels = [];
+            const values = [];
+            const colors = [];
+            
+            for (const [key, value] of Object.entries(features)) {
+                if (typeof value === 'number' && key !== 'url_length') {
+                    labels.push(key.replace(/_/g, ' ').toUpperCase());
+                    values.push(value);
+                    
+                    // Generate color based on value
+                    const alpha = 0.7;
+                    colors.push(`rgba(67, 97, 238, ${alpha})`);
+                }
+            }
+            
+            featureChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Feature Values',
+                        data: values,
+                        backgroundColor: colors,
+                        borderColor: 'rgba(67, 97, 238, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.raw.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Value'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createRiskChart(features, isPhishing) {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            
+            // Destroy previous chart if it exists
+            if (riskChart) {
+                riskChart.destroy();
+            }
+            
+            // Calculate risk factors
+            const riskFactors = [
+                { name: 'URL Length', value: features.url_length > 100 ? 1 : 0 },
+                { name: 'Special Chars', value: features.special_char_count > 5 ? 1 : 0 },
+                { name: 'Digits', value: features.digit_count > 5 ? 1 : 0 },
+                { name: 'Subdomains', value: features.subdomain_count > 2 ? 1 : 0 },
+                { name: 'IP Address', value: features.has_ip },
+                { name: 'HTTPS', value: features.has_https ? 0 : 1 },
+                { name: 'At Symbol', value: features.has_at }
+            ];
+            
+            const labels = riskFactors.map(factor => factor.name);
+            const values = riskFactors.map(factor => factor.value);
+            
+            riskChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Risk Factors',
+                        data: values,
+                        backgroundColor: isPhishing ? 'rgba(247, 37, 133, 0.2)' : 'rgba(76, 201, 240, 0.2)',
+                        borderColor: isPhishing ? 'rgba(247, 37, 133, 1)' : 'rgba(76, 201, 240, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: isPhishing ? 'rgba(247, 37, 133, 1)' : 'rgba(76, 201, 240, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: isPhishing ? 'rgba(247, 37, 133, 1)' : 'rgba(76, 201, 240, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 1
+                        }
+                    }
+                }
+            });
+        }
+
+        function createPieChart(features) {
+            const ctx = document.getElementById('pieChart').getContext('2d');
+            
+            // Destroy previous chart if it exists
+            if (pieChart) {
+                pieChart.destroy();
+            }
+            
+            // Prepare data for pie chart
+            const labels = [];
+            const values = [];
+            const colors = [
+                'rgba(67, 97, 238, 0.7)',
+                'rgba(76, 201, 240, 0.7)',
+                'rgba(247, 37, 133, 0.7)',
+                'rgba(255, 193, 7, 0.7)',
+                'rgba(40, 167, 69, 0.7)',
+                'rgba(220, 53, 69, 0.7)',
+                'rgba(23, 162, 184, 0.7)',
+                'rgba(108, 117, 125, 0.7)'
+            ];
+            
+            // Select different features for the pie chart
+            const pieFeatures = [
+                { key: 'has_https', label: 'HTTPS Secure' },
+                { key: 'has_http', label: 'HTTP Insecure' },
+                { key: 'has_ip', label: 'IP Address' },
+                { key: 'has_at', label: 'Contains @ Symbol' },
+                { key: 'subdomain_count', label: 'Subdomains' },
+                { key: 'digit_count', label: 'Digits' },
+                { key: 'special_char_count', label: 'Special Characters' }
+            ];
+            
+            for (const feature of pieFeatures) {
+                if (features[feature.key] !== undefined) {
+                    labels.push(feature.label);
+                    values.push(features[feature.key]);
+                }
+            }
+            
+            pieChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderColor: 'white',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createScatterChart(features) {
+            const ctx = document.getElementById('scatterChart').getContext('2d');
+            
+            // Destroy previous chart if it exists
+            if (scatterChart) {
+                scatterChart.destroy();
+            }
+            
+            // Create a dataset with the current point and reference points
+            const data = [
+                { x: features.url_length, y: features.special_char_count, r: 10, label: 'Current URL' }
+            ];
+            
+            // Add more reference points with different characteristics
+            const referencePoints = [
+                { x: 50, y: 2, label: 'Typical Legitimate URL', category: 'legitimate' },
+                { x: 120, y: 8, label: 'Typical Phishing URL', category: 'phishing' },
+                { x: 30, y: 1, label: 'Short Legitimate URL', category: 'legitimate' },
+                { x: 80, y: 3, label: 'Medium Legitimate URL', category: 'legitimate' },
+                { x: 150, y: 10, label: 'Long Phishing URL', category: 'phishing' },
+                { x: 200, y: 15, label: 'Very Long Phishing URL', category: 'phishing' },
+                { x: 40, y: 5, label: 'Short URL with Special Chars', category: 'suspicious' },
+                { x: 100, y: 4, label: 'Medium URL with Few Special Chars', category: 'legitimate' },
+                { x: 180, y: 12, label: 'Long URL with Many Special Chars', category: 'phishing' }
+            ];
+            
+            data.push(...referencePoints);
+            
+            // Group data by category for different colors
+            const legitimateData = data.filter(point => point.category === 'legitimate');
+            const phishingData = data.filter(point => point.category === 'phishing');
+            const suspiciousData = data.filter(point => point.category === 'suspicious');
+            const currentData = data.filter(point => point.label === 'Current URL');
+            
+            scatterChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Current URL',
+                            data: currentData,
+                            backgroundColor: 'rgba(67, 97, 238, 0.8)',
+                            borderColor: 'rgba(67, 97, 238, 1)',
+                            borderWidth: 1,
+                            pointRadius: 10
+                        },
+                        {
+                            label: 'Legitimate URLs',
+                            data: legitimateData,
+                            backgroundColor: 'rgba(76, 201, 240, 0.6)',
+                            borderColor: 'rgba(76, 201, 240, 1)',
+                            borderWidth: 1,
+                            pointRadius: 6
+                        },
+                        {
+                            label: 'Phishing URLs',
+                            data: phishingData,
+                            backgroundColor: 'rgba(247, 37, 133, 0.6)',
+                            borderColor: 'rgba(247, 37, 133, 1)',
+                            borderWidth: 1,
+                            pointRadius: 6
+                        },
+                        {
+                            label: 'Suspicious URLs',
+                            data: suspiciousData,
+                            backgroundColor: 'rgba(255, 193, 7, 0.6)',
+                            borderColor: 'rgba(255, 193, 7, 1)',
+                            borderWidth: 1,
+                            pointRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.data[context.dataIndex].label || 
+                                           `URL Length: ${context.raw.x}, Special Chars: ${context.raw.y}`;
+                                }
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'URL Length'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Special Characters'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkURL();
+            }
+        });
+    </script>
+</body>
+</html> 
