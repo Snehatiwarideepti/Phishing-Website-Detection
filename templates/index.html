@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Website Detector</title>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <style>
+        :root {
+            --blue: #3d5cf2;
+            --bg: #eef1f7;
+            --card: #f5f7fc;
+            --text: #1b2a5a;
+            --muted: #6b7280;
+            --danger-bg: #f9e4e8;
+            --danger-text: #a23a4b;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(90deg, var(--blue), #4967ff);
+            min-height: 100vh;
+            padding: 28px 12px;
+        }
+        .app {
+            max-width: 680px;
+            margin: 0 auto;
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 24px;
+        }
+        .title {
+            text-align: center;
+            color: var(--blue);
+            margin: 0;
+            font-size: 42px;
+            line-height: 1.1;
+        }
+        .subtitle {
+            margin: 8px 0 22px 0;
+            text-align: center;
+            color: var(--muted);
+            font-size: 15px;
+        }
+        .search-wrap {
+            background: #f1f3f8;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 24px;
+        }
+        .search-row {
+            display: flex;
+            border: 2px solid #5d79f8;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+        }
+        #urlInput {
+            flex: 1;
+            border: 0;
+            padding: 13px 14px;
+            outline: none;
+            font-size: 15px;
+        }
+        #checkBtn {
+            border: 0;
+            background: #4666f6;
+            color: #fff;
+            font-weight: 600;
+            padding: 0 18px;
+            cursor: pointer;
+        }
+        .panel {
+            background: #f3f4f7;
+            border-radius: 10px;
+            padding: 16px;
+        }
+        .panel h2 {
+            margin: 0 0 10px 0;
+            color: #3552b8;
+            font-size: 28px;
+        }
+        .accuracy {
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        #statusBox {
+            min-height: 46px;
+            border-radius: 8px;
+            padding: 12px;
+            background: var(--danger-bg);
+            color: var(--danger-text);
+            font-size: 14px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+        }
+        .ok {
+            background: #e8f9ee !important;
+            color: #1f7a46 !important;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(120px, 1fr));
+            gap: 12px;
+        }
+        .metric {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px 14px;
+            text-align: center;
+        }
+        .metric .value {
+            margin-top: 14px;
+            color: #3a56c4;
+            font-weight: 700;
+            font-size: 36px;
+            line-height: 1;
+        }
+        .metric .label {
+            margin-top: 10px;
+            color: #4b5563;
+            font-size: 14px;
+        }
+        .actions {
+            margin-top: 14px;
+            display: flex;
+            justify-content: end;
+        }
+        .retrain-btn {
+            border: 0;
+            background: #2e9463;
+            color: #fff;
+            border-radius: 8px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .sub-panels {
+            margin-top: 14px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        .sub-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 14px;
+        }
+        .sub-card h3 {
+            margin: 0 0 8px 0;
+            color: #3552b8;
+            font-size: 18px;
+        }
+        .plot {
+            width: 100%;
+            min-height: 280px;
+        }
+        #featureList {
+            font-size: 13px;
+            color: #374151;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        @media (max-width: 680px) {
+            .title { font-size: 32px; }
+            .panel h2 { font-size: 24px; }
+            .metrics { grid-template-columns: 1fr; }
+            .metric .value { font-size: 30px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <h1 class="title">Phishing Website Detector</h1>
+        <p class="subtitle">Enter a URL below to check if it's potentially a phishing website</p>
+
+        <div class="search-wrap">
+            <form id="analyzeForm">
+                <div class="search-row">
+                    <input id="urlInput" name="url" placeholder="http://www.paypal.com" required>
+                    <button id="checkBtn" type="submit">Check URL</button>
+                </div>
+            </form>
+        </div>
+
+        <section class="panel">
+            <h2>Analysis Results</h2>
+            <div class="accuracy">Model accuracy: <span id="accuracy">{{ test_accuracy | round(4) * 100 }}%</span></div>
+            <div id="statusBox">Enter a URL and click "Check URL".</div>
+
+            <div class="metrics">
+                <div class="metric">
+                    <div class="value" id="confidenceValue">0%</div>
+                    <div class="label">Confidence Score</div>
+                </div>
+                <div class="metric">
+                    <div class="value" id="urlLengthValue">0</div>
+                    <div class="label">URL Length</div>
+                </div>
+                <div class="metric">
+                    <div class="value" id="specialCharsValue">0</div>
+                    <div class="label">Special Characters</div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="retrain-btn" id="retrainBtn" type="button">Retrain Model</button>
+            </div>
+
+            <div class="sub-panels">
+                <div class="sub-card">
+                    <h3>URL Feature Distribution</h3>
+                    <div id="distributionPlot" class="plot"></div>
+                </div>
+                <div class="sub-card">
+                    <h3>Risk Analysis</h3>
+                    <div id="riskText">Risk level will appear after URL analysis.</div>
+                </div>
+                <div class="sub-card">
+                    <h3>Feature Importance</h3>
+                    <div id="importancePlot" class="plot"></div>
+                </div>
+                <div class="sub-card">
+                    <h3>URL Length vs. Special Characters</h3>
+                    <div id="scatterPlot" class="plot"></div>
+                </div>
+                <div class="sub-card">
+                    <h3>URL Features:</h3>
+                    <div id="featureList">No URL analyzed yet.</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const dashboard = {{ dashboard | tojson }};
+        const form = document.getElementById("analyzeForm");
+        const urlInput = document.getElementById("urlInput");
+        const statusBox = document.getElementById("statusBox");
+        const confidenceValue = document.getElementById("confidenceValue");
+        const urlLengthValue = document.getElementById("urlLengthValue");
+        const specialCharsValue = document.getElementById("specialCharsValue");
+        const accuracy = document.getElementById("accuracy");
+        const retrainBtn = document.getElementById("retrainBtn");
+        const riskText = document.getElementById("riskText");
+        const featureList = document.getElementById("featureList");
+
+        function setError(msg) {
+            statusBox.classList.remove("ok");
+            statusBox.textContent = "Error: " + msg;
+        }
+
+        function setSuccess(msg) {
+            statusBox.classList.add("ok");
+            statusBox.textContent = msg;
+        }
+
+        function renderStaticPlots() {
+            const dist = dashboard.url_length_distribution || {};
+            const edges = dist.bin_edges || [];
+            const counts = dist.counts || [];
+            const centers = [];
+            for (let i = 0; i < edges.length - 1; i++) {
+                centers.push(((edges[i] + edges[i + 1]) / 2).toFixed(0));
+            }
+            Plotly.newPlot("distributionPlot", [{
+                x: centers,
+                y: counts,
+                type: "bar",
+                marker: { color: "#4f6df6" }
+            }], {
+                margin: { t: 10, l: 35, r: 15, b: 35 },
+                xaxis: { title: "URL Length Range" },
+                yaxis: { title: "Count" }
+            }, { displayModeBar: false, responsive: true });
+
+            const fi = dashboard.feature_importance || [];
+            Plotly.newPlot("importancePlot", [{
+                x: fi.map(i => Number(i.importance).toFixed(4)),
+                y: fi.map(i => i.feature),
+                type: "bar",
+                orientation: "h",
+                marker: { color: "#2e9463" }
+            }], {
+                margin: { t: 10, l: 130, r: 15, b: 35 }
+            }, { displayModeBar: false, responsive: true });
+
+            const points = dashboard.scatter_points || [];
+            Plotly.newPlot("scatterPlot", [{
+                x: points.map(p => p.URLLength),
+                y: points.map(p => p.NoOfOtherSpecialCharsInURL),
+                mode: "markers",
+                type: "scatter",
+                marker: { color: "#5d79f8", opacity: 0.55, size: 6 }
+            }], {
+                margin: { t: 10, l: 45, r: 15, b: 45 },
+                xaxis: { title: "URL Length" },
+                yaxis: { title: "Special Characters" }
+            }, { displayModeBar: false, responsive: true });
+        }
+
+        renderStaticPlots();
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            setError("Checking URL...");
+
+            try {
+                const response = await fetch("/analyze", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url: urlInput.value.trim() })
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    setError(data.error || ("Server responded with status: " + response.status));
+                    confidenceValue.textContent = "0%";
+                    urlLengthValue.textContent = "0";
+                    specialCharsValue.textContent = "0";
+                    return;
+                }
+
+                setSuccess(`Prediction: ${data.prediction}`);
+                confidenceValue.textContent = `${data.confidence}%`;
+                urlLengthValue.textContent = `${data.url_length}`;
+                specialCharsValue.textContent = `${data.special_characters}`;
+                accuracy.textContent = `${data.model_test_accuracy}%`;
+                riskText.textContent = `${data.risk_level} risk (${data.confidence}% phishing confidence)`;
+                if (data.url_features) {
+                    const lines = Object.entries(data.url_features).map(
+                        ([k, v]) => `${k}: ${v}`
+                    );
+                    featureList.textContent = lines.join("\n");
+                }
+            } catch (error) {
+                setError(error.message);
+            }
+        });
+
+        retrainBtn.addEventListener("click", async () => {
+            try {
+                const response = await fetch("/retrain", { method: "POST" });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    setError(data.error || "Retrain failed.");
+                    return;
+                }
+                setSuccess(data.message);
+                accuracy.textContent = `${data.model_test_accuracy}%`;
+            } catch (error) {
+                setError(error.message);
+            }
+        });
+    </script>
+</body>
+</html>
