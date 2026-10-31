@@ -1,0 +1,23 @@
+# Python Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Datasets (Large CSV files exceeding GitHub limits)
+*.csv
+data/
+
+# IDE & OS specific files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+.gemini/
